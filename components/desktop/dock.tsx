@@ -277,6 +277,12 @@ export function Dock({
 
     const app = getAppById(appId);
 
+    // If app has an external URL, open it in a new tab
+    if (app?.externalUrl) {
+      window.open(app.externalUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
     // For multi-window apps, bring all windows to front
     if (app?.multiWindow) {
       if (hasOpenWindows(appId)) {

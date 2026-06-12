@@ -1,4 +1,4 @@
-export const HOME_DIR = "/Users/alanagoyal";
+export const HOME_DIR = "/Users/halliehorvath";
 export const PROJECTS_DIR = `${HOME_DIR}/Projects`;
 
 export type DocumentAppId = "textedit" | "preview";
@@ -40,24 +40,6 @@ const LOCAL_SAMPLE_FILES: LocalSampleFile[] = [
     directoryPath: `${HOME_DIR}/Documents`,
     kind: "text",
     path: `${HOME_DIR}/Documents/hello.md`,
-  },
-  {
-    assetUrl: "/documents/Base%20Case%20Capital%20I%20-%20Form%20D.pdf",
-    directoryPath: `${HOME_DIR}/Desktop`,
-    kind: "preview",
-    path: `${HOME_DIR}/Desktop/Base Case Capital I - Form D.pdf`,
-  },
-  {
-    assetUrl: "/documents/Base%20Case%20Capital%20II%20-%20Form%20D.pdf",
-    directoryPath: `${HOME_DIR}/Desktop`,
-    kind: "preview",
-    path: `${HOME_DIR}/Desktop/Base Case Capital II - Form D.pdf`,
-  },
-  {
-    assetUrl: "/documents/Base%20Case%20Capital%20III%20-%20Form%20D.pdf",
-    directoryPath: `${HOME_DIR}/Desktop`,
-    kind: "preview",
-    path: `${HOME_DIR}/Desktop/Base Case Capital III - Form D.pdf`,
   },
 ];
 

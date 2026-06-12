@@ -22,4 +22,5 @@ export interface AppConfig {
   mobile?: AppMobilePolicy;
   multiWindow?: boolean; // defaults to false - allows multiple windows per app
   cascadeOffset?: number; // offset for cascading new windows (default 30)
+  externalUrl?: string; // if set, clicking the app opens this URL instead of the app window
 }

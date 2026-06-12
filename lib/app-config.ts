@@ -35,6 +35,8 @@ export const APPS: AppConfig[] = [
     defaultSize: { width: 800, height: 550 },
     minSize: { width: 500, height: 400 },
     menuBarTitle: "Messages",
+    showOnDockByDefault: false,
+    showInFinderApplications: false,
   },
   {
     id: "photos",
@@ -62,12 +64,13 @@ export const APPS: AppConfig[] = [
     id: "calendar",
     name: "Calendar",
     icon: "/calendar.png",
-    description: "Calendar and events",
+    description: "Book time with me",
     accentColor: "#FF3B30",
     defaultPosition: { x: 170, y: 60 },
     defaultSize: { width: 900, height: 700 },
     minSize: { width: 700, height: 500 },
     menuBarTitle: "Calendar",
+    externalUrl: "https://calendly.com/hallie-horvath",
   },
   {
     id: "weather",
