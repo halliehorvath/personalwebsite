@@ -410,7 +410,7 @@ function WeatherWidget({
         )}
         {!loading && weather && (
           <>
-            <p className="text-sm font-medium">San Francisco</p>
+            <p className="text-sm font-medium">New York</p>
             <p className="text-4xl font-light mt-0.5">{Math.round(weather.temp)}°</p>
             <div className="flex items-center gap-1.5 mt-3">
               <div className={iconClassName}>{weatherInfo?.icon}</div>
