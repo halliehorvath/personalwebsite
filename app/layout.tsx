@@ -4,6 +4,7 @@ import { siteConfig } from "@/config/site";
 import "./globals.css";
 import { SystemSettingsProvider } from "@/lib/system-settings-context";
 import { AudioProvider } from "@/lib/music/audio-context";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -42,6 +43,7 @@ export default function RootLayout({
           <SystemSettingsProvider>
             <AudioProvider>
               {children}
+              <Analytics />
             </AudioProvider>
           </SystemSettingsProvider>
         </ThemeProvider>
