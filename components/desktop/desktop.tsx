@@ -46,6 +46,7 @@ const PhotosApp = dynamic(() => import("@/components/apps/photos/photos-app").th
 const CalendarApp = dynamic(() => import("@/components/apps/calendar/calendar-app").then(m => ({ default: m.CalendarApp })));
 const WeatherApp = dynamic(() => import("@/components/apps/weather/weather-app").then(m => ({ default: m.WeatherApp })));
 const MusicApp = dynamic(() => import("@/components/apps/music/music-app").then(m => ({ default: m.MusicApp })));
+const LooseThreadsApp = dynamic(() => import("@/components/apps/loose-threads/loose-threads-app").then(m => ({ default: m.LooseThreadsApp })));
 const TextEditWindow = dynamic(() => import("@/components/apps/textedit").then(m => ({ default: m.TextEditWindow })));
 const PreviewWindow = dynamic(() => import("@/components/apps/preview").then(m => ({ default: m.PreviewWindow })));
 
@@ -772,6 +773,10 @@ function DesktopContent({
 
           <Window appId="music">
             <MusicApp />
+          </Window>
+
+          <Window appId="loose-threads">
+            <LooseThreadsApp inShell={true} />
           </Window>
 
           {visibleFinderWindows.map((windowState) => {

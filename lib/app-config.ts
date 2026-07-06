@@ -133,6 +133,23 @@ export const APPS: AppConfig[] = [
     cascadeOffset: 30,
   },
   {
+    id: "loose-threads",
+    name: "Loose Threads",
+    icon: "/timemachine.svg",
+    description: "One connection a day, from what you already love",
+    accentColor: "#33A85A",
+    defaultPosition: { x: 210, y: 70 },
+    defaultSize: { width: 720, height: 660 },
+    minSize: { width: 380, height: 520 },
+    menuBarTitle: "Loose Threads",
+    mobile: {
+      supported: false,
+      shellFallbackAppId: "notes",
+      directRouteRedirectTo: "/",
+      showInFinderApplications: false,
+    },
+  },
+  {
     id: "preview",
     name: "Preview",
     icon: "/preview.png",

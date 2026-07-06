@@ -1,0 +1,40 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tmField" x1="512" y1="80" x2="512" y2="944" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#63C97A"/>
+      <stop offset="0.55" stop-color="#33A85A"/>
+      <stop offset="1" stop-color="#1F8A46"/>
+    </linearGradient>
+    <radialGradient id="tmGlow" cx="0.5" cy="0.36" r="0.75">
+      <stop stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- squircle field -->
+  <path d="M512 80c286 0 352 66 352 352v160c0 286-66 352-352 352s-352-66-352-352V432C160 146 226 80 512 80Z" fill="url(#tmField)"/>
+  <path d="M512 80c286 0 352 66 352 352v160c0 286-66 352-352 352s-352-66-352-352V432C160 146 226 80 512 80Z" fill="url(#tmGlow)"/>
+
+  <!-- concentric rings -->
+  <circle cx="512" cy="512" r="300" stroke="#ffffff" stroke-opacity="0.28" stroke-width="14"/>
+  <circle cx="512" cy="512" r="232" stroke="#ffffff" stroke-opacity="0.22" stroke-width="10"/>
+
+  <!-- counterclockwise sweep arrow -->
+  <path d="M512 246 A266 266 0 1 0 778 512" stroke="#ffffff" stroke-width="42" stroke-linecap="round" fill="none"/>
+  <path d="M512 200 L512 292 L436 246 Z" fill="#ffffff"/>
+
+  <!-- hour ticks -->
+  <g stroke="#ffffff" stroke-width="14" stroke-linecap="round" stroke-opacity="0.9">
+    <line x1="512" y1="330" x2="512" y2="366"/>
+    <line x1="694" y1="512" x2="658" y2="512"/>
+    <line x1="512" y1="694" x2="512" y2="658"/>
+    <line x1="330" y1="512" x2="366" y2="512"/>
+  </g>
+
+  <!-- hands, pointing to ~10:10 -->
+  <g stroke="#ffffff" stroke-linecap="round">
+    <line x1="512" y1="512" x2="430" y2="440" stroke-width="22"/>
+    <line x1="512" y1="512" x2="600" y2="452" stroke-width="18"/>
+  </g>
+  <circle cx="512" cy="512" r="24" fill="#ffffff"/>
+</svg>

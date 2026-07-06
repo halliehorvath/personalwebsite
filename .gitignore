@@ -36,6 +36,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# loose threads private deck (lives in Supabase, never committed to this public repo)
+data/loose-threads/
+
 # vercel
 .vercel
 
