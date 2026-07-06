@@ -93,19 +93,24 @@ export function LooseThreadsApp({
   const [status, setStatus] = useState<"checking" | "locked" | "open">("checking");
   const [deck, setDeck] = useState<Deck | null>(null);
 
-  const loadDeck = useCallback(async () => {
-    const r = await fetch("/api/loose-threads/deck");
-    if (r.ok) {
-      setDeck(await r.json());
-      setStatus("open");
-      return true;
+  const loadDeck = useCallback(async (): Promise<{ ok: boolean; status: number }> => {
+    try {
+      const r = await fetch("/api/loose-threads/deck");
+      if (r.ok) {
+        setDeck(await r.json());
+        setStatus("open");
+        return { ok: true, status: 200 };
+      }
+      setStatus("locked");
+      return { ok: false, status: r.status };
+    } catch {
+      setStatus("locked");
+      return { ok: false, status: 0 };
     }
-    setStatus("locked");
-    return false;
   }, []);
 
   useEffect(() => {
-    loadDeck().catch(() => setStatus("locked"));
+    loadDeck();
   }, [loadDeck]);
 
   return (
@@ -162,7 +167,11 @@ function LTNav({ isMobile, isDesktop }: { isMobile: boolean; isDesktop: boolean 
 // ---------------------------------------------------------------------------
 // Login gate — posts the password to the server, which sets the session cookie.
 // ---------------------------------------------------------------------------
-function LoginGate({ onUnlocked }: { onUnlocked: () => Promise<boolean> }) {
+function LoginGate({
+  onUnlocked,
+}: {
+  onUnlocked: () => Promise<{ ok: boolean; status: number }>;
+}) {
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -185,7 +194,18 @@ function LoginGate({ onUnlocked }: { onUnlocked: () => Promise<boolean> }) {
         body: JSON.stringify({ password: pw }),
       });
       if (r.ok) {
-        await onUnlocked();
+        // Password accepted + cookie set; now load the deck. Surface any
+        // failure instead of silently returning to the locked screen.
+        const res = await onUnlocked();
+        if (!res.ok) {
+          setErr(
+            res.status === 503
+              ? "Signed in, but the deck couldn't load — check the server config (Supabase key)."
+              : res.status === 401
+                ? "Signed in, but the session didn't stick. Check cookies are enabled."
+                : `Signed in, but couldn't load the deck (${res.status || "network error"}).`
+          );
+        }
         return;
       }
       const data = await r.json().catch(() => ({}));
