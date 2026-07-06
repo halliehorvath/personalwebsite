@@ -63,6 +63,7 @@ interface Rec {
 interface Narration {
   loading?: boolean;
   error?: boolean;
+  reason?: string;
   narration?: string | null;
   recommendations?: Rec[] | null;
 }
@@ -305,13 +306,17 @@ function Printer({ deck }: { deck: Deck }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ connection: conn }),
       });
-      if (!r.ok) throw new Error("narrate failed");
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error(body.reason || body.error || `narrate ${r.status}`);
+      }
       const parsed = (await r.json()) as Narration;
       setNarrations((n) => ({ ...n, [conn.id]: { ...parsed, loading: false } }));
-    } catch {
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : "unreachable";
       setNarrations((n) => ({
         ...n,
-        [conn.id]: { loading: false, error: true, narration: null, recommendations: null },
+        [conn.id]: { loading: false, error: true, reason, narration: null, recommendations: null },
       }));
     }
   }, []);
@@ -581,8 +586,9 @@ function Receipt({
         </>
       )}
       {n?.error && (
-        <div style={{ color: "#999", fontSize: 9.5, marginTop: 4 }}>
+        <div style={{ color: "#999", fontSize: 9.5, marginTop: 4, wordBreak: "break-word" }}>
           narrator unreachable — data only
+          {n.reason ? ` (${n.reason})` : ""}
         </div>
       )}
 

@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "Narrator is not configured." },
+      { error: "Narrator is not configured.", reason: "missing env: ANTHROPIC_API_KEY" },
       { status: 503 }
     );
   }
@@ -63,8 +63,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (!upstream.ok) {
+      const bodyText = await upstream.text().catch(() => "");
+      console.error("[loose-threads] narrate upstream", upstream.status, bodyText.slice(0, 300));
       return NextResponse.json(
-        { error: "Narrator upstream error" },
+        { error: "Narrator upstream error", reason: `upstream ${upstream.status}: ${bodyText.slice(0, 160)}` },
         { status: 502 }
       );
     }
@@ -77,9 +79,11 @@ export async function POST(req: NextRequest) {
 
     const parsed = JSON.parse(text.replace(/```json|```/g, "").trim()) as Narration;
     return NextResponse.json(parsed);
-  } catch {
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e);
+    console.error("[loose-threads] narrate failed:", reason);
     return NextResponse.json(
-      { error: "Failed to generate narration" },
+      { error: "Failed to generate narration", reason },
       { status: 500 }
     );
   }
