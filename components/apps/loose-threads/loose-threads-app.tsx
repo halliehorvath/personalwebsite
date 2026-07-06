@@ -93,21 +93,25 @@ export function LooseThreadsApp({
   const [status, setStatus] = useState<"checking" | "locked" | "open">("checking");
   const [deck, setDeck] = useState<Deck | null>(null);
 
-  const loadDeck = useCallback(async (): Promise<{ ok: boolean; status: number }> => {
-    try {
-      const r = await fetch("/api/loose-threads/deck");
-      if (r.ok) {
-        setDeck(await r.json());
-        setStatus("open");
-        return { ok: true, status: 200 };
+  const loadDeck = useCallback(
+    async (): Promise<{ ok: boolean; status: number; reason?: string }> => {
+      try {
+        const r = await fetch("/api/loose-threads/deck");
+        if (r.ok) {
+          setDeck(await r.json());
+          setStatus("open");
+          return { ok: true, status: 200 };
+        }
+        const body = await r.json().catch(() => ({}));
+        setStatus("locked");
+        return { ok: false, status: r.status, reason: body.reason };
+      } catch {
+        setStatus("locked");
+        return { ok: false, status: 0 };
       }
-      setStatus("locked");
-      return { ok: false, status: r.status };
-    } catch {
-      setStatus("locked");
-      return { ok: false, status: 0 };
-    }
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
     loadDeck();
@@ -170,7 +174,7 @@ function LTNav({ isMobile, isDesktop }: { isMobile: boolean; isDesktop: boolean 
 function LoginGate({
   onUnlocked,
 }: {
-  onUnlocked: () => Promise<{ ok: boolean; status: number }>;
+  onUnlocked: () => Promise<{ ok: boolean; status: number; reason?: string }>;
 }) {
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
@@ -199,8 +203,8 @@ function LoginGate({
         const res = await onUnlocked();
         if (!res.ok) {
           setErr(
-            res.status === 503
-              ? "Signed in, but the deck couldn't load — check the server config (Supabase key)."
+            res.reason
+              ? `Deck error: ${res.reason}`
               : res.status === 401
                 ? "Signed in, but the session didn't stick. Check cookies are enabled."
                 : `Signed in, but couldn't load the deck (${res.status || "network error"}).`
@@ -269,7 +273,7 @@ function LoginGate({
             →
           </button>
         </div>
-        <div className="h-4 text-xs text-red-500">{err}</div>
+        <div className="min-h-4 text-xs text-red-500 text-center break-words max-w-full">{err}</div>
       </form>
     </div>
   );

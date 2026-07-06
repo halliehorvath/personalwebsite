@@ -14,12 +14,18 @@ let cachedDeck: unknown = null;
 
 async function loadDeck(): Promise<unknown> {
   if (cachedDeck) return cachedDeck;
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    const missing = [!url && "NEXT_PUBLIC_SUPABASE_URL", !key && "SUPABASE_SERVICE_ROLE_KEY"]
+      .filter(Boolean)
+      .join(", ");
+    throw new Error(`missing env: ${missing}`);
+  }
+  const supabase = createClient(url, key);
   const { data, error } = await supabase.storage.from(BUCKET).download(OBJECT);
-  if (error || !data) throw error || new Error("deck not found");
+  if (error) throw new Error(`storage: ${error.message}`);
+  if (!data) throw new Error("storage: empty response");
   cachedDeck = JSON.parse(await data.text());
   return cachedDeck;
 }
@@ -31,7 +37,9 @@ export async function GET(req: NextRequest) {
   }
   try {
     return NextResponse.json(await loadDeck());
-  } catch {
-    return NextResponse.json({ error: "Deck unavailable" }, { status: 503 });
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e);
+    console.error("[loose-threads] deck load failed:", reason);
+    return NextResponse.json({ error: "Deck unavailable", reason }, { status: 503 });
   }
 }
