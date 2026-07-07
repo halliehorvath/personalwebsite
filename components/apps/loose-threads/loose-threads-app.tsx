@@ -420,9 +420,6 @@ function Printer({ deck }: { deck: Deck }) {
       >
         <div className="text-left">
           <div className="text-[13px] font-semibold">Memory printer</div>
-          <div className="text-[11.5px] text-muted-foreground mt-0.5">
-            {ordered.length} connections · deck of {deck.generated_at}
-          </div>
         </div>
         <div className="flex items-center gap-3.5">
           <span
@@ -573,6 +570,12 @@ function Receipt({
         <div style={{ fontSize: 9.5, marginTop: 4, color: "#555" }}>
           {stamp} · #{conn.id}
         </div>
+        <div style={{ fontSize: 8.5, letterSpacing: "0.16em", color: "#888", marginTop: 9 }}>
+          THE WINDOW
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.05em", marginTop: 1 }}>
+          {windowLabel(conn.book.window)}
+        </div>
       </div>
 
       <Divider />
@@ -583,9 +586,6 @@ function Receipt({
           <div>
             <div style={{ fontWeight: 700 }}>{conn.book.title}</div>
             <div style={{ color: "#555" }}>{conn.book.author}</div>
-            <div style={{ color: "#888", fontSize: 9.5, marginTop: 3 }}>
-              read {formatDate(conn.book.window[0])} – {formatDate(conn.book.window[1])}
-            </div>
           </div>
         </div>
       </Section>
@@ -738,6 +738,22 @@ function formatDate(iso: string) {
 const ISO_DATE_RE = /\b(\d{4})-(\d{2})-(\d{2})\b/g;
 function prettifyDates(text: string) {
   return text.replace(ISO_DATE_RE, (m) => formatDate(m));
+}
+
+// The shared temporal window the book/album/podcast overlapped in, as a compact
+// header: "June 2026", "May–June 2026", or "December 2025 – January 2026".
+function monthName(y: number, m: number) {
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US", {
+    month: "long",
+    timeZone: "UTC",
+  });
+}
+function windowLabel([start, end]: [string, string]): string {
+  const [sy, sm] = start.split("-").map(Number);
+  const [ey, em] = end.split("-").map(Number);
+  if (sy === ey && sm === em) return `${monthName(sy, sm)} ${sy}`;
+  if (sy === ey) return `${monthName(sy, sm)}–${monthName(ey, em)} ${sy}`;
+  return `${monthName(sy, sm)} ${sy} – ${monthName(ey, em)} ${ey}`;
 }
 function pctLabel(v: number) {
   const pct = v * 100;
