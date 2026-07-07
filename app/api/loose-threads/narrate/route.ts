@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, verifyToken } from "@/lib/loose-threads/auth";
-import {
-  NARRATOR_MODEL,
-  NARRATOR_SYSTEM,
-  type Narration,
-} from "@/lib/loose-threads/narrator";
+import { NARRATOR_MODEL, NARRATOR_SYSTEM } from "@/lib/loose-threads/narrator";
 
+// Narration: a clean generative caption. One call, no tools. This must always
+// succeed independently of the recommendation agent.
 export const maxDuration = 30;
 
 const MAX_BODY_BYTES = 16 * 1024;
@@ -49,14 +47,13 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: NARRATOR_MODEL,
-        max_tokens: 1000,
+        max_tokens: 400,
         system: NARRATOR_SYSTEM,
         messages: [
           {
             role: "user",
             content:
-              "Narrate this connection. Data:\n" +
-              JSON.stringify(connection, null, 2),
+              "Narrate this connection. Data:\n" + JSON.stringify(connection, null, 2),
           },
         ],
       }),
@@ -72,19 +69,16 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await upstream.json();
-    const text: string = (data.content || [])
+    const narration: string = (data.content || [])
       .filter((b: { type: string }) => b.type === "text")
       .map((b: { text: string }) => b.text)
-      .join("\n");
+      .join("\n")
+      .trim();
 
-    const parsed = JSON.parse(text.replace(/```json|```/g, "").trim()) as Narration;
-    return NextResponse.json(parsed);
+    return NextResponse.json({ narration });
   } catch (e) {
     const reason = e instanceof Error ? e.message : String(e);
     console.error("[loose-threads] narrate failed:", reason);
-    return NextResponse.json(
-      { error: "Failed to generate narration", reason },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate narration", reason }, { status: 500 });
   }
 }

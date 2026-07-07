@@ -59,13 +59,25 @@ interface Rec {
   title: string;
   creator?: string;
   why: string;
+  source_url?: string;
 }
 interface Narration {
   loading?: boolean;
   error?: boolean;
   reason?: string;
   narration?: string | null;
-  recommendations?: Rec[] | null;
+}
+interface AgentTrace {
+  reason?: string;
+  queries?: string[];
+}
+// State of the recommendation AGENT for one connection.
+interface RecState {
+  loading?: boolean;
+  status?: "found" | "none" | "error";
+  rec?: Rec;
+  reason?: string; // for "none" (honest miss) or "error" (couldn't reach out)
+  trace?: AgentTrace;
 }
 
 const KEYFRAMES = `
@@ -287,6 +299,7 @@ function Printer({ deck }: { deck: Deck }) {
   const [phase, setPhase] = useState<"idle" | "printing" | "done" | "tearing">("idle");
   const [current, setCurrent] = useState<Connection | null>(null);
   const [narrations, setNarrations] = useState<Record<string, Narration>>({});
+  const [recs, setRecs] = useState<Record<string, RecState>>({});
   const [feedback, setFeedback] = useState<Record<string, "kept" | "missed">>({});
   const [toast, setToast] = useState("");
   const drawCount = useRef(0);
@@ -316,8 +329,50 @@ function Printer({ deck }: { deck: Deck }) {
       const reason = e instanceof Error ? e.message : "unreachable";
       setNarrations((n) => ({
         ...n,
-        [conn.id]: { loading: false, error: true, reason, narration: null, recommendations: null },
+        [conn.id]: { loading: false, error: true, reason, narration: null },
       }));
+    }
+  }, []);
+
+  // The agentic half: reason -> web_search -> verify. Independent of narration.
+  const fetchRecommendation = useCallback(async (conn: Connection) => {
+    setRecs((r) => ({ ...r, [conn.id]: { loading: true } }));
+    try {
+      const res = await fetch("/api/loose-threads/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connection: conn }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        // Hard failure at the reveal — soft "couldn't reach out" state.
+        setRecs((r) => ({ ...r, [conn.id]: { status: "error", reason: body.reason } }));
+        return;
+      }
+      const { result, trace } = (await res.json()) as {
+        result: { found: boolean } & Partial<Rec> & { reason?: string };
+        trace?: AgentTrace;
+      };
+      if (result.found) {
+        setRecs((r) => ({
+          ...r,
+          [conn.id]: {
+            status: "found",
+            rec: {
+              medium: result.medium || "book",
+              title: result.title || "",
+              creator: result.creator,
+              why: result.why || "",
+              source_url: result.source_url,
+            },
+            trace,
+          },
+        }));
+      } else {
+        setRecs((r) => ({ ...r, [conn.id]: { status: "none", reason: result.reason, trace } }));
+      }
+    } catch {
+      setRecs((r) => ({ ...r, [conn.id]: { status: "error" } }));
     }
   }, []);
 
@@ -330,6 +385,7 @@ function Printer({ deck }: { deck: Deck }) {
       setCurrent(next);
       setPhase("printing");
       if (!narrations[next.id]) fetchNarration(next);
+      if (!recs[next.id]) fetchRecommendation(next);
       window.setTimeout(() => setPhase("done"), 3300);
     };
 
@@ -339,7 +395,7 @@ function Printer({ deck }: { deck: Deck }) {
     } else {
       start();
     }
-  }, [ordered, phase, current, narrations, fetchNarration]);
+  }, [ordered, phase, current, narrations, recs, fetchNarration, fetchRecommendation]);
 
   function mark(id: string, val: "kept" | "missed") {
     setFeedback((f) => ({ ...f, [id]: val }));
@@ -348,6 +404,7 @@ function Printer({ deck }: { deck: Deck }) {
   }
 
   const n = current ? narrations[current.id] : null;
+  const rec = current ? recs[current.id] : null;
   const busy = phase === "printing" || phase === "tearing";
 
   return (
@@ -408,6 +465,7 @@ function Printer({ deck }: { deck: Deck }) {
             <Receipt
               conn={current}
               n={n}
+              rec={rec}
               feedback={feedback}
               onMark={mark}
               onAnother={pull}
@@ -475,6 +533,7 @@ function PrintButton({
 function Receipt({
   conn,
   n,
+  rec,
   feedback,
   onMark,
   onAnother,
@@ -482,6 +541,7 @@ function Receipt({
 }: {
   conn: Connection;
   n: Narration | null;
+  rec: RecState | null;
   feedback: Record<string, "kept" | "missed">;
   onMark: (id: string, val: "kept" | "missed") => void;
   onAnother: () => void;
@@ -575,22 +635,38 @@ function Receipt({
         )}
       </div>
 
-      {n && !n.loading && n.recommendations && n.recommendations.length > 0 && (
-        <>
-          <Divider />
-          <Section label="THREADS TO PULL">
-            {n.recommendations.map((rec, i) => (
-              <Recommendation key={i} rec={rec} first={i === 0} />
-            ))}
-          </Section>
-        </>
-      )}
       {n?.error && (
         <div style={{ color: "#999", fontSize: 9.5, marginTop: 4, wordBreak: "break-word" }}>
           narrator unreachable — data only
           {n.reason ? ` (${n.reason})` : ""}
         </div>
       )}
+
+      <Divider />
+
+      {/* The agent's verdict: a verified thread, an honest miss, or a soft error. */}
+      <Section label="ONE THREAD TO PULL">
+        {!rec || rec.loading ? (
+          <div style={{ animation: "ltShimmer 1.4s infinite", color: "#777", marginTop: 2 }}>
+            reaching out — searching for a real thread…
+          </div>
+        ) : rec.status === "found" && rec.rec ? (
+          <Recommendation rec={rec.rec} trace={rec.trace} />
+        ) : rec.status === "none" ? (
+          <div style={{ color: "#777", marginTop: 2 }}>
+            no thread found this time
+            {rec.reason ? ` — ${rec.reason}` : "."}
+            <AgentTraceLine trace={rec.trace} />
+          </div>
+        ) : (
+          <div style={{ color: "#999", marginTop: 2 }}>
+            couldn&apos;t reach out just now.
+            {rec?.reason ? (
+              <span style={{ fontSize: 9, wordBreak: "break-word" }}> ({rec.reason})</span>
+            ) : null}
+          </div>
+        )}
+      </Section>
 
       <Divider />
 
@@ -927,10 +1003,10 @@ const MEDIUM_TAG: Record<string, string> = {
   poem: "READ",
 };
 
-function Recommendation({ rec, first }: { rec: Rec; first: boolean }) {
+function Recommendation({ rec, trace }: { rec: Rec; trace?: AgentTrace }) {
   const { href, label } = recLink(rec);
   return (
-    <div style={{ marginTop: first ? 4 : 12 }}>
+    <div style={{ marginTop: 4 }}>
       <div style={{ fontSize: 8.5, letterSpacing: "0.14em", color: "#aaa" }}>
         {MEDIUM_TAG[rec.medium] || "NEXT"}
       </div>
@@ -939,28 +1015,53 @@ function Recommendation({ rec, first }: { rec: Rec; first: boolean }) {
         {rec.creator ? ` — ${rec.creator}` : ""}
       </div>
       <div style={{ color: "#555", fontStyle: "italic" }}>{rec.why}</div>
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: "inline-block",
-          marginTop: 5,
-          textDecoration: "none",
-          fontFamily: MONO,
-          fontSize: 9.5,
-          letterSpacing: "0.08em",
-          padding: "4px 10px",
-          borderWidth: 1,
-          borderStyle: "solid",
-          borderColor: "#1c1c1c",
-          borderRadius: 2,
-          color: "#1c1c1c",
-          background: "transparent",
-        }}
-      >
-        {label} ↗
-      </a>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 5, flexWrap: "wrap" }}>
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-block",
+            textDecoration: "none",
+            fontFamily: MONO,
+            fontSize: 9.5,
+            letterSpacing: "0.08em",
+            padding: "4px 10px",
+            borderWidth: 1,
+            borderStyle: "solid",
+            borderColor: "#1c1c1c",
+            borderRadius: 2,
+            color: "#1c1c1c",
+            background: "transparent",
+          }}
+        >
+          {label} ↗
+        </a>
+        {rec.source_url && (
+          <a
+            href={rec.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 9, color: "#888", textDecoration: "underline" }}
+          >
+            source ↗
+          </a>
+        )}
+      </div>
+      <AgentTraceLine trace={trace} verified />
+    </div>
+  );
+}
+
+// Makes the agentic work visible on the receipt: what it searched (the evidence
+// it's an agent, not a guess).
+function AgentTraceLine({ trace, verified }: { trace?: AgentTrace; verified?: boolean }) {
+  const queries = trace?.queries?.filter(Boolean) || [];
+  if (!queries.length) return null;
+  return (
+    <div style={{ fontSize: 8.5, color: "#aaa", marginTop: 6, wordBreak: "break-word" }}>
+      {verified ? "✓ verified via " : ""}
+      {queries.length} web search{queries.length === 1 ? "" : "es"}: {queries.join(" · ")}
     </div>
   );
 }
